@@ -3,6 +3,15 @@ import torch.nn as nn
 import math
 
 class InputEmbeddings(nn.Module):
+    """ Input Embeddings take the input sequence and convert it into a vector of size d_model
+
+    Args:
+        d_model (int): The size of the output vector
+        vocab_size (int): The size of the 
+        
+    Output:
+        x (torch.Tensor): The output tensor of shape (batch_size, seq_len, d_model)
+    """
 
     def __init__(self, d_model: int, vocab_size: int):
         super().__init__()
@@ -18,6 +27,13 @@ class InputEmbeddings(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
+    """Positional encoding is a way of adding information about the relative position of the tokens in the sequence.
+
+    Args:
+        d_model (int) : Size of embedding of each word. 
+        seq_len (int) : Length of the sequence or sentence or number of words in the sentence
+        dropout (float) : The dropout probability
+    """
 
     def __init__(self, d_model:int, seq_len: int, dropout: float):
         super().__init__()
@@ -44,6 +60,7 @@ class PositionalEncoding(nn.Module):
 
 
     def forward(self, x):
+
         x = x + (self.pe[:, :x.shape[1], :]).requires_grad_(False)
 
         return self.dropout(x)
@@ -99,6 +116,47 @@ class MultiHeadAttentionBlock(nn.Module):
         self.W_o = nn.Linear(d_model, d_model)
         self.droptout = nn.Dropout(dropout)
 
+    @staticmethod
+    def attention(query, key, value, mask, dropout : nn.Dropout):
+        d_k = query.shape[-1] 
+        
+        attention_scores = query @ key.transpose(-2, -1) / math.sqrt(d_k)
+        if mask is not None:
+            attention_scores.maksed_fill(mask==0, -1e9)
+
+        attention_scores = attention_scores.softmax(dim = -1)
+
+        if dropout is not None:
+            attention_scores = dropout(attention_scores)
+        
+        return (attention_scores @ value), attention_scores
+
+
     def forward(self, q, k, v, mask):
         query = self.W_q(q) #(Batchsize, seqlen, d_model) -> (Batchsize, seqlen, dmodel)
-        key = self.
+        key = self.W_K(k) #Batchsize, seqlen, d_model) -> (Batchsize, seqlen, dmodel)
+        value = self.W_v(v) #Batchsize, seqlen, d_model) -> (Batchsize, seqlen, dmodel)
+
+        batch_size = query.shape[0]
+        seq_len = query.shape[1]
+
+        # Split the query, key and value into h heads
+        query = query.view(batch_size, seq_len, self.h, self.d_k)
+        key = key.view(batch_size, seq_len, self.h, self.d_k)
+        value = value.view(batch_size, seq_len, self.h, self.d_k)
+
+        
+        #change the shape to (batch_size, self.h, seq_len, self.d_k)
+        query = torch.permute(query, (0, 2, 1, 3))  ##(batch_size, self.h, seq_len, self.d_k)
+        key = key.permute(query, (0, 2, 1, 3))      ## (batch_size, self.h, seq_len, self.d_k)
+        value = value.permute(query, (0, 2, 1, 3))  ## (batch_size, self.h, seq_len, self.d_k)
+
+        
+        x, self.attention_scores = MultiHeadAttentionBlock.attention(query, key, value, mask, self.dropout)
+
+        x = x.transose(1,2)
+        x = x.view(batch_size, seq_len, self.h*self.d_k)
+
+        x = self.W_o(x)
+
+        return x    
