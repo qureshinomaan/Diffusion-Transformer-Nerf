@@ -4,6 +4,7 @@ Code for diffusion, transformer and nerfs from scratch in pytorch.
 ## TODO 
 - [x] https://www.youtube.com/watch?v=bCz4OMemCcA
 - [ ] https://www.youtube.com/watch?v=ISNdQcPhsts
+- [ ] https://github.com/mlabonne/llm-course
 - [ ] https://www.youtube.com/watch?v=ZBKpAp_6TGI
 - [ ] https://www.youtube.com/watch?v=hlv79rcHws0&list=LL&index=2
 - [ ] https://www.youtube.com/watch?v=tZTQ6S9PfkE
